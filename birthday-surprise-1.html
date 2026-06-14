@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Happy Birthday 🎁</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --rose:    #e8637a;
+      --gold:    #f0c060;
+      --blush:   #f8b4c8;
+      --deep:    #0d0714;
+      --mid:     #1a0f2e;
+      --glass:   rgba(255,255,255,0.06);
+      --border:  rgba(255,255,255,0.12);
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: radial-gradient(ellipse at 60% 30%, #1e0a35 0%, #0d0714 60%, #050308 100%);
+      font-family: 'Cormorant Garamond', serif;
+      color: #fff;
+      cursor: default;
+      user-select: none;
+    }
+
+    /* ─── Stars background ─────────────────────────────────────────── */
+    #stars-canvas {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    }
+
+    /* ─── Fireworks / particles canvas ────────────────────────────── */
+    #fx-canvas {
+      position: fixed; inset: 0; z-index: 5; pointer-events: none;
+    }
+
+    /* ─── Scene wrapper ────────────────────────────────────────────── */
+    #scene {
+      position: relative; z-index: 10;
+      width: 100%; height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+
+    /* ─── Subtitle above box ───────────────────────────────────────── */
+    #hint {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: clamp(0.85rem, 2vw, 1.05rem);
+      letter-spacing: 0.18em;
+      color: rgba(240,192,96,0.7);
+      margin-bottom: 2.4rem;
+      opacity: 1;
+      transition: opacity 0.6s;
+    }
+
+    /* ─── Gift Box ─────────────────────────────────────────────────── */
+    #gift-wrap {
+      position: relative;
+      width: clamp(160px, 28vw, 240px);
+      cursor: pointer;
+      filter: drop-shadow(0 0 32px rgba(232,99,122,0.35));
+      transition: filter 0.4s;
+    }
+    #gift-wrap:hover {
+      filter: drop-shadow(0 0 52px rgba(232,99,122,0.6));
+    }
+
+    /* shake animation (idle) */
+    @keyframes shake {
+      0%,100%  { transform: rotate(0deg) translateY(0); }
+      15%      { transform: rotate(-3deg) translateY(-3px); }
+      30%      { transform: rotate(3deg) translateY(-5px); }
+      45%      { transform: rotate(-2deg) translateY(-3px); }
+      60%      { transform: rotate(2deg) translateY(-1px); }
+      75%      { transform: rotate(-1deg) translateY(0); }
+    }
+    #gift-wrap.shaking { animation: shake 2.4s ease-in-out infinite; }
+
+    /* open animation */
+    @keyframes lidFly {
+      0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+      60%  { transform: translateY(-160px) rotate(-22deg) scale(1.1); opacity: 1; }
+      100% { transform: translateY(-260px) rotate(-35deg) scale(0.7); opacity: 0; }
+    }
+    @keyframes boxBounce {
+      0%,100% { transform: scale(1) translateY(0); }
+      20%     { transform: scale(1.08,0.93) translateY(6px); }
+      40%     { transform: scale(0.95,1.06) translateY(-12px); }
+      60%     { transform: scale(1.04,0.97) translateY(-4px); }
+      80%     { transform: scale(0.98,1.02) translateY(-8px); }
+    }
+    #gift-wrap.opening .gift-lid { animation: lidFly 0.9s cubic-bezier(0.22,1,0.36,1) forwards; }
+    #gift-wrap.opening .gift-box-body { animation: boxBounce 0.8s 0.15s ease both; }
+
+    /* SVG gift parts */
+    .gift-lid, .gift-box-body, .gift-ribbon { display: block; }
+
+    /* ─── Letter card ──────────────────────────────────────────────── */
+    #letter {
+      position: absolute;
+      bottom: 38%;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px) scale(0.85);
+      width: clamp(280px, 60vw, 480px);
+      background: linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
+      backdrop-filter: blur(22px) saturate(1.6);
+      -webkit-backdrop-filter: blur(22px) saturate(1.6);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 20px;
+      padding: clamp(1.5rem, 4vw, 2.6rem) clamp(1.6rem, 5vw, 2.8rem);
+      box-shadow:
+        0 8px 60px rgba(232,99,122,0.18),
+        0 0 0 1px rgba(240,192,96,0.12),
+        inset 0 1px 0 rgba(255,255,255,0.14);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 20;
+      transition: opacity 0.1s;
+    }
+    #letter.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    @keyframes letterRise {
+      0%   { transform: translateX(-50%) translateY(80px) scale(0.85); opacity: 0; }
+      100% { transform: translateX(-50%) translateY(0px) scale(1); opacity: 1; }
+    }
+    #letter.rising {
+      animation: letterRise 1s 0.55s cubic-bezier(0.22,1,0.36,1) forwards;
+    }
+
+    #letter-decoration {
+      text-align: center;
+      font-size: 1.4rem;
+      letter-spacing: 0.5em;
+      color: var(--gold);
+      opacity: 0.8;
+      margin-bottom: 1rem;
+    }
+    #letter-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.2rem, 3.5vw, 1.7rem);
+      font-weight: 700;
+      text-align: center;
+      background: linear-gradient(120deg, #f0c060, #f8b4c8, #e8637a);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1.1rem;
+      line-height: 1.3;
+    }
+    #letter-body {
+      font-size: clamp(0.9rem, 2.2vw, 1.05rem);
+      line-height: 1.85;
+      color: rgba(255,255,255,0.88);
+      font-style: italic;
+      font-weight: 300;
+      min-height: 5.5em;
+    }
+    #cursor {
+      display: inline-block;
+      width: 2px; height: 1.1em;
+      background: var(--rose);
+      vertical-align: text-bottom;
+      margin-left: 2px;
+      animation: blink 0.8s step-end infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    #letter-footer {
+      margin-top: 1.2rem;
+      text-align: right;
+      font-size: 0.9rem;
+      color: rgba(240,192,96,0.7);
+      font-style: italic;
+    }
+
+    /* ─── Glow ring under gift ─────────────────────────────────────── */
+    #glow-ring {
+      position: absolute;
+      bottom: calc(36% - 18px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px; height: 28px;
+      background: radial-gradient(ellipse, rgba(232,99,122,0.35) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.6s;
+      z-index: 4;
+    }
+    body.opened #glow-ring { opacity: 1; }
+
+    /* ─── Floating hearts (CSS only) ──────────────────────────────── */
+    .heart-float {
+      position: fixed;
+      font-size: 1.2rem;
+      pointer-events: none;
+      z-index: 6;
+      animation: floatHeart linear forwards;
+      opacity: 0;
+    }
+    @keyframes floatHeart {
+      0%   { transform: translateY(0) scale(0.5) rotate(var(--rot)); opacity: 0; }
+      10%  { opacity: 0.9; }
+      90%  { opacity: 0.7; }
+      100% { transform: translateY(-90vh) scale(1.2) rotate(var(--rot2)); opacity: 0; }
+    }
+
+    /* ─── Click instruction pulse ──────────────────────────────────── */
+    @keyframes pulseGlow {
+      0%,100% { text-shadow: 0 0 8px rgba(240,192,96,0.3); }
+      50%     { text-shadow: 0 0 20px rgba(240,192,96,0.8), 0 0 40px rgba(232,99,122,0.4); }
+    }
+    #hint { animation: pulseGlow 2.2s ease-in-out infinite; }
+
+    /* ─── Ambient light blobs ──────────────────────────────────────── */
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(90px);
+      pointer-events: none;
+      z-index: 1;
+      animation: driftBlob ease-in-out infinite alternate;
+    }
+    .blob-1 {
+      width: 400px; height: 400px;
+      background: rgba(232,99,122,0.12);
+      top: -80px; right: -60px;
+      animation-duration: 9s;
+    }
+    .blob-2 {
+      width: 350px; height: 350px;
+      background: rgba(100,40,180,0.15);
+      bottom: -60px; left: -80px;
+      animation-duration: 12s;
+    }
+    @keyframes driftBlob {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(30px,20px) scale(1.12); }
+    }
+
+    /* ─── Responsive tweak ─────────────────────────────────────────── */
+    @media (max-height: 600px) {
+      #letter { bottom: 30%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Ambient blobs -->
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+
+<!-- Background stars -->
+<canvas id="stars-canvas"></canvas>
+
+<!-- Particle / fireworks fx -->
+<canvas id="fx-canvas"></canvas>
+
+<!-- Glow under box -->
+<div id="glow-ring"></div>
+
+<!-- Main scene -->
+<div id="scene">
+  <p id="hint">✦ tap the gift to open ✦</p>
+
+  <!-- SVG Gift Box -->
+  <div id="gift-wrap" class="shaking" onclick="openGift()">
+    <svg viewBox="0 0 240 260" xmlns="http://www.w3.org/2000/svg" aria-label="Gift box">
+      <defs>
+        <linearGradient id="boxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stop-color="#8b2252"/>
+          <stop offset="100%" stop-color="#5a1535"/>
+        </linearGradient>
+        <linearGradient id="lidGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stop-color="#a8275f"/>
+          <stop offset="100%" stop-color="#6d1a40"/>
+        </linearGradient>
+        <linearGradient id="ribbonGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%"   stop-color="#f5d070"/>
+          <stop offset="100%" stop-color="#c8922a"/>
+        </linearGradient>
+        <filter id="giftGlow">
+          <feGaussianBlur stdDeviation="4" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- Box body -->
+      <g class="gift-box-body" filter="url(#giftGlow)">
+        <!-- Main box -->
+        <rect x="18" y="120" width="204" height="130" rx="6" fill="url(#boxGrad)"/>
+        <!-- Side shadow -->
+        <rect x="18" y="120" width="30" height="130" rx="6" fill="rgba(0,0,0,0.15)"/>
+        <!-- Vertical ribbon on box -->
+        <rect x="106" y="120" width="28" height="130" fill="url(#ribbonGrad)" opacity="0.9"/>
+        <!-- Horizontal ribbon band (lower) -->
+        <rect x="18" y="178" width="204" height="22" fill="url(#ribbonGrad)" opacity="0.9"/>
+        <!-- Shine -->
+        <rect x="50" y="128" width="4" height="110" rx="2" fill="rgba(255,255,255,0.08)"/>
+      </g>
+
+      <!-- Lid -->
+      <g class="gift-lid" filter="url(#giftGlow)">
+        <!-- Lid body -->
+        <rect x="10" y="96" width="220" height="36" rx="5" fill="url(#lidGrad)"/>
+        <!-- Lid side shadow -->
+        <rect x="10" y="96" width="32" height="36" rx="5" fill="rgba(0,0,0,0.14)"/>
+        <!-- Lid ribbon stripe -->
+        <rect x="103" y="96" width="34" height="36" fill="url(#ribbonGrad)" opacity="0.9"/>
+        <!-- Lid shine -->
+        <rect x="44" y="101" width="3" height="24" rx="1.5" fill="rgba(255,255,255,0.1)"/>
+
+        <!-- Bow left loop -->
+        <ellipse cx="93" cy="80" rx="32" ry="18" fill="url(#ribbonGrad)"
+          transform="rotate(-30 93 80)" opacity="0.95"/>
+        <ellipse cx="93" cy="80" rx="24" ry="11" fill="url(#lidGrad)"
+          transform="rotate(-30 93 80)" opacity="0.6"/>
+
+        <!-- Bow right loop -->
+        <ellipse cx="147" cy="80" rx="32" ry="18" fill="url(#ribbonGrad)"
+          transform="rotate(30 147 80)" opacity="0.95"/>
+        <ellipse cx="147" cy="80" rx="24" ry="11" fill="url(#lidGrad)"
+          transform="rotate(30 147 80)" opacity="0.6"/>
+
+        <!-- Bow center knot -->
+        <circle cx="120" cy="88" r="13" fill="url(#ribbonGrad)"/>
+        <circle cx="120" cy="88" r="7" fill="#f5d888"/>
+
+        <!-- Ribbon tails -->
+        <path d="M112 100 Q98 115 80 124" stroke="url(#ribbonGrad)" stroke-width="7"
+          fill="none" stroke-linecap="round"/>
+        <path d="M128 100 Q142 115 162 124" stroke="url(#ribbonGrad)" stroke-width="7"
+          fill="none" stroke-linecap="round"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- Letter card (hidden initially) -->
+  <div id="letter">
+    <div id="letter-decoration">✦ ❧ ✦</div>
+    <div id="letter-title">Happy Birthday, My Dad 🌹</div>
+    <div id="letter-body"><span id="typewriter"></span><span id="cursor"></span></div>
+    <div id="letter-footer">— forever yours 💫</div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   STARS BACKGROUND
+══════════════════════════════════════════════════════════════ */
+(function () {
+  const c = document.getElementById('stars-canvas');
+  const ctx = c.getContext('2d');
+  let stars = [];
+
+  function resize() {
+    c.width  = window.innerWidth;
+    c.height = window.innerHeight;
+    buildStars();
+  }
+
+  function buildStars() {
+    stars = [];
+    const n = Math.floor((c.width * c.height) / 3800);
+    for (let i = 0; i < n; i++) {
+      stars.push({
+        x:     Math.random() * c.width,
+        y:     Math.random() * c.height,
+        r:     Math.random() * 1.4 + 0.2,
+        a:     Math.random(),
+        da:    (Math.random() * 0.006 + 0.002) * (Math.random() < 0.5 ? 1 : -1)
+      });
+    }
+  }
+
+  function drawStars() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    stars.forEach(s => {
+      s.a += s.da;
+      if (s.a > 1 || s.a < 0) s.da *= -1;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${s.a * 0.85})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(drawStars);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  drawStars();
+})();
+
+/* ══════════════════════════════════════════════════════════════
+   PARTICLE / FIREWORKS SYSTEM
+══════════════════════════════════════════════════════════════ */
+const fxCanvas  = document.getElementById('fx-canvas');
+const fxCtx     = fxCanvas.getContext('2d');
+let   particles = [];
+let   fxRunning = false;
+
+function resizeFX() {
+  fxCanvas.width  = window.innerWidth;
+  fxCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeFX);
+resizeFX();
+
+/* ─ Heart path helper ─ */
+function heartPath(ctx, cx, cy, size) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(size / 10, size / 10);
+  ctx.beginPath();
+  ctx.moveTo(0, -3);
+  ctx.bezierCurveTo(5, -8, 10, -2, 0, 4);
+  ctx.bezierCurveTo(-10, -2, -5, -8, 0, -3);
+  ctx.closePath();
+  ctx.restore();
+}
+
+class Particle {
+  constructor(x, y, type) {
+    this.x = x; this.y = y;
+    this.type = type || (Math.random() < 0.4 ? 'heart' : 'spark');
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 7 + 1.5;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed - (Math.random() * 3);
+    this.life = 1;
+    this.decay = Math.random() * 0.018 + 0.008;
+    this.size  = this.type === 'heart'
+      ? Math.random() * 10 + 5
+      : Math.random() * 3  + 1;
+    this.color = this.type === 'heart'
+      ? `hsl(${340 + Math.random()*30},90%,${60+Math.random()*20}%)`
+      : `hsl(${Math.random()*60+10},100%,${70+Math.random()*25}%)`;
+    this.gravity = 0.12;
+    this.rotation = Math.random() * Math.PI * 2;
+    this.spin     = (Math.random() - 0.5) * 0.15;
+  }
+  update() {
+    this.vx *= 0.97;
+    this.vy += this.gravity;
+    this.x  += this.vx;
+    this.y  += this.vy;
+    this.life -= this.decay;
+    this.rotation += this.spin;
+  }
+  draw(ctx) {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, this.life);
+    if (this.type === 'heart') {
+      ctx.fillStyle = this.color;
+      ctx.shadowColor = this.color;
+      ctx.shadowBlur  = 8;
+      heartPath(ctx, this.x, this.y, this.size);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = this.color;
+      ctx.shadowColor = this.color;
+      ctx.shadowBlur  = 6;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+/* Firework burst */
+function burst(x, y, count, type) {
+  count = count || 40;
+  for (let i = 0; i < count; i++) {
+    particles.push(new Particle(x, y, type));
+  }
+}
+
+/* Random firework */
+function randomFirework() {
+  const x = fxCanvas.width  * (0.1 + Math.random() * 0.8);
+  const y = fxCanvas.height * (0.05 + Math.random() * 0.55);
+  burst(x, y, Math.floor(Math.random() * 30 + 20));
+}
+
+function fxLoop() {
+  if (!fxRunning) return;
+  fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => { p.update(); p.draw(fxCtx); });
+  requestAnimationFrame(fxLoop);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FLOATING HEARTS (DOM)
+══════════════════════════════════════════════════════════════ */
+const HEART_CHARS = ['❤️','💕','💖','💗','💓','💞','🌹','✨','💫'];
+function spawnFloatingHeart() {
+  const el = document.createElement('div');
+  el.className = 'heart-float';
+  el.textContent = HEART_CHARS[Math.floor(Math.random() * HEART_CHARS.length)];
+  const x = 5 + Math.random() * 90;
+  const dur = 4 + Math.random() * 5;
+  const rot  = -20 + Math.random() * 40;
+  const rot2 = rot + (Math.random() - 0.5) * 30;
+  el.style.cssText = `
+    left: ${x}vw;
+    bottom: -40px;
+    font-size: ${0.9 + Math.random() * 0.9}rem;
+    --rot: ${rot}deg;
+    --rot2: ${rot2}deg;
+    animation-duration: ${dur}s;
+  `;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), dur * 1000 + 200);
+}
+let heartInterval = null;
+
+/* ══════════════════════════════════════════════════════════════
+   TYPEWRITER
+══════════════════════════════════════════════════════════════ */
+const MESSAGE = [
+  "در این روز زیبا، جهان لحظه‌ای می‌ایستد",
+  " تا تولد تو را جشن بگیرد، عزیزترینم.",
+  "\n\nهر خنده‌ای که به لب می‌آوری،",
+  " هر مهربانی که نثار می‌کنی،",
+  " دنیا را برایم رنگین‌تر می‌کند.",
+  "\n\nکاش این سال برایت سرشار باشد",
+  " از شادی، از گرما، از لحظه‌های ناب.",
+  " کاش هر آرزویت، یک‌به‌یک، به دستت برسد.",
+  "\n\nتو عمیقاً دوست داشته می‌شوی. 🌹"
+].join('');
+
+function typeWriter(el, text, delay) {
+  delay = delay || 0;
+  let i = 0;
+  setTimeout(() => {
+    const iv = setInterval(() => {
+      if (i >= text.length) { clearInterval(iv); return; }
+      if (text[i] === '\n') {
+        el.innerHTML += '<br>';
+      } else {
+        el.innerHTML += text[i];
+      }
+      i++;
+    }, 38);
+  }, delay);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   AUDIO
+══════════════════════════════════════════════════════════════ */
+let audio = null;
+function tryPlayMusic() {
+  try {
+    audio = new Audio('music.mp3');
+    audio.loop   = true;
+    audio.volume = 0;
+    audio.play().then(() => {
+      let v = 0;
+      const fade = setInterval(() => {
+        v = Math.min(v + 0.02, 0.55);
+        audio.volume = v;
+        if (v >= 0.55) clearInterval(fade);
+      }, 120);
+    }).catch(() => {/* silent – no file */});
+  } catch(e) {}
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MAIN OPEN FUNCTION
+══════════════════════════════════════════════════════════════ */
+let opened = false;
+
+function openGift() {
+  if (opened) return;
+  opened = true;
+
+  const wrap   = document.getElementById('gift-wrap');
+  const hint   = document.getElementById('hint');
+  const letter = document.getElementById('letter');
+  const tw     = document.getElementById('typewriter');
+
+  // Stop shake, start open
+  wrap.classList.remove('shaking');
+  wrap.classList.add('opening');
+  wrap.onclick = null;
+
+  // Fade hint
+  hint.style.opacity = '0';
+
+  // Play music
+  tryPlayMusic();
+
+  // Start particle engine
+  fxRunning = true;
+  fxLoop();
+
+  // Initial central burst
+  setTimeout(() => {
+    const rect = wrap.getBoundingClientRect();
+    const cx = rect.left + rect.width  / 2;
+    const cy = rect.top  + rect.height / 2;
+    burst(cx, cy, 70, 'heart');
+    burst(cx, cy, 40, 'spark');
+  }, 300);
+
+  // Fireworks cascade
+  const fw1 = setInterval(randomFirework, 380);
+  setTimeout(() => clearInterval(fw1), 5000);
+  const fw2 = setInterval(randomFirework, 700);
+  setTimeout(() => clearInterval(fw2), 12000);
+
+  // Floating hearts
+  heartInterval = setInterval(spawnFloatingHeart, 500);
+
+  // Body glow
+  document.body.classList.add('opened');
+
+  // Show letter
+  setTimeout(() => {
+    letter.classList.add('visible', 'rising');
+    setTimeout(() => {
+      typeWriter(tw, MESSAGE, 200);
+    }, 900);
+  }, 750);
+
+  // Extra burst waves
+  [1400, 2600, 4000].forEach(t => {
+    setTimeout(() => {
+      const x = fxCanvas.width  * (0.15 + Math.random() * 0.7);
+      const y = fxCanvas.height * (0.1  + Math.random() * 0.4);
+      burst(x, y, 55, Math.random() < 0.5 ? 'heart' : 'spark');
+    }, t);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MOUSE SPARKLE ON MOVE (subtle)
+══════════════════════════════════════════════════════════════ */
+let moveTimer = null;
+document.addEventListener('mousemove', e => {
+  if (!fxRunning) return;
+  clearTimeout(moveTimer);
+  moveTimer = setTimeout(() => {}, 0);
+  if (Math.random() < 0.12) {
+    const p = new Particle(e.clientX, e.clientY, 'spark');
+    p.size = Math.random() * 2 + 0.5;
+    p.decay = 0.04;
+    p.vx = (Math.random() - 0.5) * 2;
+    p.vy = -Math.random() * 2;
+    p.gravity = 0.04;
+    particles.push(p);
+  }
+});
+</script>
+</body>
+</html>
